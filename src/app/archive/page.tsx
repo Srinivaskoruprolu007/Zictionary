@@ -93,25 +93,23 @@ export default function ArchivePage() {
                   <h2 className="text-2xl font-semibold mb-4 sticky top-[55px] bg-background/80 backdrop-blur py-2 z-10 border-b">{year}</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {yearSlang.map((slang) => (
-                      <Card key={slang.id} className="flex flex-col justify-between transition-transform hover:scale-[1.02]">
-                         <Link href={`/?search=${encodeURIComponent(slang.term)}`} legacyBehavior>
-                           <a className='block'>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-lg font-semibold text-primary hover:underline">{slang.term}</CardTitle>
-                                <p className="text-xs text-muted-foreground line-clamp-2">{slang.definition}</p>
-                            </CardHeader>
-                            <CardContent className="pt-2">
-                                <SlangFreshnessMeter freshness={slang.freshness} />
-                                <div className="mt-2 flex flex-wrap gap-1">
-                                {slang.categories.slice(0, 2).map(cat => ( // Show max 2 categories
-                                    <Badge key={cat} variant="secondary" className="text-xs capitalize">{cat}</Badge>
-                                ))}
-                                {slang.region !== 'Global' && <Badge variant="outline" className="text-xs"><Globe className="h-3 w-3 mr-1"/>{slang.region}</Badge>}
-                                </div>
-                            </CardContent>
-                           </a>
-                         </Link>
-                      </Card>
+                      <Link key={slang.id} href={`/?search=${encodeURIComponent(slang.term)}`} className="block focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg">
+                        <Card className="flex flex-col justify-between h-full transition-transform hover:scale-[1.02]">
+                              <CardHeader className="pb-2">
+                                  <CardTitle className="text-lg font-semibold text-primary hover:underline">{slang.term}</CardTitle>
+                                  <p className="text-xs text-muted-foreground line-clamp-2">{slang.definition}</p>
+                              </CardHeader>
+                              <CardContent className="pt-2 flex-grow flex flex-col justify-end">
+                                  <SlangFreshnessMeter freshness={slang.freshness} />
+                                  <div className="mt-2 flex flex-wrap gap-1">
+                                  {slang.categories.slice(0, 2).map(cat => ( // Show max 2 categories
+                                      <Badge key={cat} variant="secondary" className="text-xs capitalize">{cat}</Badge>
+                                  ))}
+                                  {slang.region !== 'Global' && <Badge variant="outline" className="text-xs"><Globe className="h-3 w-3 mr-1"/>{slang.region}</Badge>}
+                                  </div>
+                              </CardContent>
+                        </Card>
+                      </Link>
                     ))}
                   </div>
                   {year !== YEARS[YEARS.length - 1] && <Separator className="my-8" />}

@@ -22,12 +22,10 @@ export function TrendingWords({ words }: TrendingWordsProps) {
       <CardContent>
         <div className="flex flex-wrap gap-2">
           {words.map((word) => (
-             <Link href={`/?search=${encodeURIComponent(word.term)}`} key={word.id} passHref legacyBehavior>
-                <a >
-                    <Badge variant="outline" className="cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground border-accent text-accent dark:border-accent/70 dark:text-accent hover:dark:bg-accent/80 hover:dark:text-accent-foreground text-sm px-3 py-1">
-                        {word.term}
-                    </Badge>
-                </a>
+             <Link href={`/?search=${encodeURIComponent(word.term)}`} key={word.id} className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-full">
+                <Badge variant="outline" className="cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground border-accent text-accent dark:border-accent/70 dark:text-accent hover:dark:bg-accent/80 hover:dark:text-accent-foreground text-sm px-3 py-1">
+                    {word.term}
+                </Badge>
             </Link>
           ))}
         </div>

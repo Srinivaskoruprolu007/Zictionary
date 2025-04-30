@@ -19,17 +19,17 @@ export function Header() {
 
         {/* Navigation Links */}
         <nav className="flex items-center space-x-4 lg:space-x-6 flex-grow">
-           <Link href="/" passHref legacyBehavior>
+           <Link href="/">
               <Button variant="ghost" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                  <Home className="mr-2 h-4 w-4" /> Home
               </Button>
             </Link>
-            <Link href="/archive" passHref legacyBehavior>
+            <Link href="/archive">
               <Button variant="ghost" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                  <Archive className="mr-2 h-4 w-4" /> Archive
               </Button>
             </Link>
-             <Link href="/boomer-traps" passHref legacyBehavior>
+             <Link href="/boomer-traps">
               <Button variant="ghost" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                  <AlertTriangle className="mr-2 h-4 w-4" /> Boomer Traps
               </Button>
