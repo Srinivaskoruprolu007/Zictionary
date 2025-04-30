@@ -17,7 +17,10 @@ export function useIsMobile(): boolean {
     }
 
     const checkDevice = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+      // Check window existence again inside the handler, just in case
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+      }
     };
 
     // Initial check

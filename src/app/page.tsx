@@ -24,9 +24,10 @@ import { AlertCircle, Bot, PlusCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from '@/components/ui/separator';
 import { defineSlang, DefineSlangInput, DefineSlangOutput } from '@/ai/flows/define-slang-flow'; // Import AI definition flow
+import { useToast } from '@/hooks/use-toast'; // Import useToast
 
-// --- Mock Data ---
-const MOCK_SLANG_DATA: SlangEntry[] = [
+// --- Mock Data (Initial State) ---
+const INITIAL_MOCK_SLANG_DATA: SlangEntry[] = [
   { id: '1', term: 'Rizz', definition: 'Short for charisma; the ability to charm or flirt successfully.', example: 'He\'s got unspoken rizz.', tone: 'playful', categories: ['social'], freshness: 'fresh', region: 'Global', createdAt: new Date(2023, 5, 1), upvotes: 1502, downvotes: 55, approved: true, submittedBy: 'ZMaster', thenVsNow: { traditionalMeaning: 'Not applicable (new term)', genZMeaning: 'Skill in charming potential romantic partners.' }, origin: 'Popularized by streamer Kai Cenat',
     communityDefinitions: [
         { id: 'def1-1', definition: "Like, when someone's smooth with words and actions, especially when flirting.", example: "Dude walked up to her and just started rizzing, it was wild.", tone: 'playful', tags: ['accurate'], upvotes: 120, downvotes: 5, submittedBy: 'User123', createdAt: new Date(2023, 6, 10) },
@@ -57,127 +58,6 @@ const MOCK_BATTLE: SlangBattlePair = {
     question: "Which one's currently hitting harder?",
 };
 
-// --- Mock Fetch Functions ---
-async function fetchSlang(term: string, categories: Category[], region: Region): Promise<SlangEntry[]> {
-  console.log(`Fetching slang for term: "${term}", categories: ${categories.join(', ')}, region: ${region}`);
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
-
-  let results = MOCK_SLANG_DATA.filter(entry => entry.region === region || entry.region === 'Global' || entry.region === 'Unknown'); // Include 'Unknown' region
-
-  if (term) {
-    results = results.filter(entry =>
-      entry.term.toLowerCase().includes(term.toLowerCase()) ||
-      entry.definition.toLowerCase().includes(term.toLowerCase())
-    );
-  }
-
-  if (categories.length > 0) {
-    results = results.filter(entry =>
-      entry.categories.some(cat => categories.includes(cat))
-    );
-  }
-
-   // Simulate fetching "in the wild" data for the first result if available and it's a single result search
-  if (results.length === 1 && term) {
-    const firstResultTerm = results[0].term;
-    try {
-        console.log(`Fetching 'in the wild' for: ${firstResultTerm}`);
-        const [tweets, tiktoks, redditPosts] = await Promise.all([
-            getTweets(firstResultTerm),
-            getTikTokVideos(firstResultTerm),
-            getRedditPosts(firstResultTerm)
-        ]);
-        results[0].inTheWild = { tweets, tiktoks, redditPosts };
-    } catch (error) {
-        console.error("Failed to fetch 'in the wild' data:", error);
-         results[0].inTheWild = { tweets: [], tiktoks: [], redditPosts: [] };
-    }
-  } else if (results.length > 0) {
-      // Clear inTheWild if it's not a single specific search result
-      results.forEach(r => delete r.inTheWild);
-  }
-
-  return results;
-}
-
-async function fetchBattle(): Promise<SlangBattlePair | null> {
-    console.log("Fetching slang battle");
-    await new Promise(resolve => setTimeout(resolve, 300));
-    // In a real app, fetch a random or current battle
-    return MOCK_BATTLE;
-}
-
-// Mock upvote/downvote functions
-async function handleVote(id: string, type: 'upvote' | 'downvote', target: 'term' | 'definition', definitionId?: string) {
-    console.log(`${type} received for ${target} ID: ${id}` + (definitionId ? ` (Def ID: ${definitionId})` : ''));
-    await new Promise(resolve => setTimeout(resolve, 100)); // Simulate API call delay
-
-    // Find the item and update its count locally (in real app, call API)
-     const itemIndex = MOCK_SLANG_DATA.findIndex(item => item.id === id);
-     if (itemIndex > -1) {
-        // Cannot vote on AI generated entries for now
-        if (MOCK_SLANG_DATA[itemIndex].isAIGenerated) {
-            console.log("Voting disabled for AI generated entries.");
-            return false;
-        }
-
-        if (target === 'term') {
-            if (type === 'upvote') MOCK_SLANG_DATA[itemIndex].upvotes += 1;
-            else MOCK_SLANG_DATA[itemIndex].downvotes += 1;
-        } else if (target === 'definition' && definitionId) {
-            const defIndex = MOCK_SLANG_DATA[itemIndex].communityDefinitions?.findIndex(def => def.id === definitionId);
-            if (defIndex !== undefined && defIndex > -1 && MOCK_SLANG_DATA[itemIndex].communityDefinitions) {
-                 if (type === 'upvote') MOCK_SLANG_DATA[itemIndex].communityDefinitions![defIndex].upvotes += 1;
-                 else MOCK_SLANG_DATA[itemIndex].communityDefinitions![defIndex].downvotes += 1;
-            }
-        }
-     }
-    return true; // Indicate success/failure
-}
-
-async function handleBattleVote(battleId: string, winningTermId: string): Promise<void> {
-    console.log(`Processing vote for battle ${battleId}, winner: ${winningTermId}`);
-    await new Promise(resolve => setTimeout(resolve, 200));
-    // In real app: Record vote, update stats, maybe fetch next battle
-}
-
-// Function to generate AI definition
-async function generateAIDefinition(term: string): Promise<SlangEntry | null> {
-    console.log(`Generating AI definition for: "${term}"`);
-    try {
-        const input: DefineSlangInput = { term };
-        const output: DefineSlangOutput = await defineSlang(input);
-
-        // Create a SlangEntry object from the AI output
-        const aiEntry: SlangEntry = {
-            id: `ai-${term.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`, // Generate a unique ID
-            term: term, // Use the original searched term for consistency
-            definition: output.definition,
-            example: output.example,
-            tone: output.tone,
-            categories: output.categories,
-            freshness: output.freshness,
-            region: 'Unknown', // AI doesn't determine region yet
-            createdAt: new Date(),
-            upvotes: 0, // AI entries start with 0 votes
-            downvotes: 0,
-            submittedBy: 'Zictionary AI',
-            approved: true, // Assume AI definitions are approved
-            isAIGenerated: true, // Flag as AI generated
-            // AI doesn't provide these details
-            origin: undefined,
-            thenVsNow: undefined,
-            pronunciationUrl: undefined,
-            communityDefinitions: [],
-            inTheWild: undefined, // No "in the wild" for AI generated on the fly
-        };
-        return aiEntry;
-    } catch (err) {
-        console.error(`AI definition generation failed for "${term}":`, err);
-        return null;
-    }
-}
-
 
 // --- Component ---
 export default function Home() {
@@ -188,7 +68,8 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<Region>(initialRegion);
-  const [slangResults, setSlangResults] = useState<SlangEntry[]>([]);
+  const [slangResults, setSlangResults] = useState<SlangEntry[]>([]); // Holds the currently displayed results
+  const [allSlangData, setAllSlangData] = useState<SlangEntry[]>(INITIAL_MOCK_SLANG_DATA); // Holds the "database"
   const [currentBattle, setCurrentBattle] = useState<SlangBattlePair | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false); // State for AI generation loading
@@ -196,6 +77,178 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [isTranslatorOpen, setIsTranslatorOpen] = useState(false);
   const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
+  const { toast } = useToast(); // Use the toast hook
+
+
+  // --- Mock Fetch Functions (Now using allSlangData state) ---
+  const fetchSlang = useCallback(async (term: string, categories: Category[], region: Region): Promise<SlangEntry[]> => {
+      console.log(`Fetching slang for term: "${term}", categories: ${categories.join(', ')}, region: ${region}`);
+      await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
+
+      let results = allSlangData.filter(entry => entry.region === region || entry.region === 'Global' || entry.region === 'Unknown'); // Include 'Unknown' region
+
+      if (term) {
+          results = results.filter(entry =>
+          entry.term.toLowerCase().includes(term.toLowerCase()) ||
+          entry.definition.toLowerCase().includes(term.toLowerCase())
+          );
+      }
+
+      if (categories.length > 0) {
+          results = results.filter(entry =>
+          entry.categories.some(cat => categories.includes(cat))
+          );
+      }
+
+      // Simulate fetching "in the wild" data for the first result if available and it's a single result search
+      if (results.length === 1 && term) {
+          const firstResultTerm = results[0].term;
+          try {
+              console.log(`Fetching 'in the wild' for: ${firstResultTerm}`);
+              const [tweets, tiktoks, redditPosts] = await Promise.all([
+                  getTweets(firstResultTerm),
+                  getTikTokVideos(firstResultTerm),
+                  getRedditPosts(firstResultTerm)
+              ]);
+              // Create a new object for the result to avoid direct mutation
+              results[0] = { ...results[0], inTheWild: { tweets, tiktoks, redditPosts } };
+          } catch (error) {
+              console.error("Failed to fetch 'in the wild' data:", error);
+              results[0] = { ...results[0], inTheWild: { tweets: [], tiktoks: [], redditPosts: [] } };
+          }
+      } else if (results.length > 0) {
+          // Clear inTheWild if it's not a single specific search result
+           results = results.map(r => {
+               const { inTheWild, ...rest } = r; // Destructure to remove inTheWild
+               return rest;
+           });
+      }
+
+      return results;
+  }, [allSlangData]); // Depend on allSlangData
+
+  const fetchBattle = useCallback(async (): Promise<SlangBattlePair | null> => {
+      console.log("Fetching slang battle");
+      await new Promise(resolve => setTimeout(resolve, 300));
+      // In a real app, fetch a random or current battle
+      return MOCK_BATTLE;
+  }, []);
+
+  // Mock upvote/downvote functions (Updates allSlangData state)
+   const handleVote = useCallback(async (id: string, type: 'upvote' | 'downvote', target: 'term' | 'definition', definitionId?: string): Promise<boolean> => {
+    console.log(`${type} received for ${target} ID: ${id}` + (definitionId ? ` (Def ID: ${definitionId})` : ''));
+    await new Promise(resolve => setTimeout(resolve, 100)); // Simulate API call delay
+
+    let updated = false;
+    setAllSlangData(prevData => {
+        const newData = prevData.map(item => {
+            if (item.id === id) {
+                 // Cannot vote on AI generated entries for now
+                if (item.isAIGenerated && target === 'term') {
+                    console.log("Voting disabled for AI generated entries.");
+                     toast({ // Add toast notification
+                        variant: "destructive",
+                        title: "Voting Disabled",
+                        description: "Can't vote on AI-generated entries.",
+                    });
+                    return item; // Return unchanged item
+                }
+
+                if (target === 'term') {
+                    updated = true;
+                    return {
+                        ...item,
+                        upvotes: type === 'upvote' ? item.upvotes + 1 : item.upvotes,
+                        downvotes: type === 'downvote' ? item.downvotes + 1 : item.downvotes,
+                    };
+                } else if (target === 'definition' && definitionId && item.communityDefinitions) {
+                     // Cannot vote on definitions of AI generated entries
+                    if (item.isAIGenerated) {
+                        console.log("Voting disabled for community definitions of AI generated entries.");
+                        toast({ // Add toast notification
+                            variant: "destructive",
+                            title: "Voting Disabled",
+                            description: "Can't vote on definitions of AI-generated entries.",
+                        });
+                        return item;
+                    }
+                    const newDefs = item.communityDefinitions.map(def => {
+                        if (def.id === definitionId) {
+                            updated = true;
+                            return {
+                                ...def,
+                                upvotes: type === 'upvote' ? def.upvotes + 1 : def.upvotes,
+                                downvotes: type === 'downvote' ? def.downvotes + 1 : def.downvotes,
+                            };
+                        }
+                        return def;
+                    });
+                    return { ...item, communityDefinitions: newDefs };
+                }
+            }
+            return item;
+        });
+        return newData;
+    });
+
+    // After state update, trigger a re-fetch/filter of slangResults
+    // This ensures the UI reflects the change from allSlangData
+    if (updated) {
+         // Use a slight delay or directly call loadSlang if appropriate
+         // setTimeout(() => loadSlang(searchTerm, selectedCategories, selectedRegion), 50);
+          loadSlang(searchTerm, selectedCategories, selectedRegion);
+    }
+
+
+    return updated; // Indicate success/failure based on whether state was potentially changed
+   }, [toast, loadSlang, searchTerm, selectedCategories, selectedRegion]); // Add dependencies
+
+  const handleBattleVote = useCallback(async (battleId: string, winningTermId: string): Promise<void> => {
+      console.log(`Processing vote for battle ${battleId}, winner: ${winningTermId}`);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      // In real app: Record vote, update stats, maybe fetch next battle
+      toast({
+          title: "Vote Recorded!",
+          description: `You voted for "${allSlangData.find(s=>s.id === winningTermId)?.term}".`,
+      });
+  }, [toast, allSlangData]); // Add toast dependency
+
+  // Function to generate AI definition
+  const generateAIDefinition = useCallback(async (term: string): Promise<SlangEntry | null> => {
+      console.log(`Generating AI definition for: "${term}"`);
+      try {
+          const input: DefineSlangInput = { term };
+          const output: DefineSlangOutput = await defineSlang(input);
+
+          // Create a SlangEntry object from the AI output
+          const aiEntry: SlangEntry = {
+              id: `ai-${term.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`, // Generate a unique ID
+              term: term, // Use the original searched term for consistency
+              definition: output.definition,
+              example: output.example,
+              tone: output.tone,
+              categories: output.categories,
+              freshness: output.freshness,
+              region: 'Unknown', // AI doesn't determine region yet
+              createdAt: new Date(),
+              upvotes: 0, // AI entries start with 0 votes
+              downvotes: 0,
+              submittedBy: 'Zictionary AI',
+              approved: true, // Assume AI definitions are approved
+              isAIGenerated: true, // Flag as AI generated
+              // AI doesn't provide these details
+              origin: undefined,
+              thenVsNow: undefined,
+              pronunciationUrl: undefined,
+              communityDefinitions: [],
+              inTheWild: undefined, // No "in the wild" for AI generated on the fly
+          };
+          return aiEntry;
+      } catch (err) {
+          console.error(`AI definition generation failed for "${term}":`, err);
+          return null;
+      }
+  }, []); // No dependencies needed for this specific function
 
 
   const loadSlang = useCallback(async (term: string, categories: Category[], region: Region) => {
@@ -216,6 +269,8 @@ export default function Home() {
         if (aiResult) {
             console.log(`AI generated definition for "${term}" successfully.`);
             results = [aiResult]; // Use AI result
+             // Optionally add the AI result to the main data pool if desired
+            // setAllSlangData(prev => [...prev, aiResult]);
         } else {
             console.log(`AI generation failed or returned null for "${term}".`);
              // Keep results empty to show "No results found" message
@@ -231,7 +286,7 @@ export default function Home() {
       setIsLoading(false);
       setIsGeneratingAI(false); // Ensure AI generating state is false at the end
     }
-  }, []);
+  }, [fetchSlang, generateAIDefinition]); // Added dependencies
 
    const loadBattle = useCallback(async () => {
     setIsBattleLoading(true);
@@ -244,7 +299,7 @@ export default function Home() {
     } finally {
         setIsBattleLoading(false);
     }
-   }, []);
+   }, [fetchBattle]); // Added fetchBattle dependency
 
   useEffect(() => {
     loadSlang(searchTerm, selectedCategories, selectedRegion);
@@ -280,52 +335,26 @@ export default function Home() {
      setSelectedRegion(region);
    };
 
-   const handleVoteCallback = async (id: string, type: 'upvote' | 'downvote') => {
+   // Renamed handleVoteCallback to handleTermVote for clarity
+   const handleTermVote = async (id: string, type: 'upvote' | 'downvote') => {
         const success = await handleVote(id, type, 'term');
-        if (success) {
-            // Update local state optimistically or refetch
-             setSlangResults(prev => prev.map(item =>
-                item.id === id
-                ? { ...item, [type === 'upvote' ? 'upvotes' : 'downvotes']: item[type === 'upvote' ? 'upvotes' : 'downvotes'] + 1 }
-                : item
-             ));
-        } else {
-            // Optionally show a toast or message for disabled voting on AI entries
+        if (!success) {
+            // Toast notification for disabled voting is handled within handleVote
             console.log("Voting might be disabled for this entry.");
         }
-        // Handle failure (e.g., show toast)
+        // No need to update local state here, handleVote->setAllSlangData->loadSlang handles it
     };
 
    const handleDefinitionVote = async (definitionId: string, voteType: 'up' | 'down') => {
-        // Find the parent SlangEntry ID based on the definitionId (might need better mapping in real app)
-        const parentSlang = slangResults.find(slang => slang.communityDefinitions?.some(def => def.id === definitionId));
+        // Find the parent SlangEntry ID based on the definitionId
+        const parentSlang = allSlangData.find(slang => slang.communityDefinitions?.some(def => def.id === definitionId));
         if (!parentSlang) return;
 
-        // Prevent voting on definitions of AI generated entries (though they shouldn't have any)
-        if (parentSlang.isAIGenerated) {
-             console.log("Voting disabled for community definitions of AI generated entries.");
-             return;
-        }
-
         const success = await handleVote(parentSlang.id, voteType === 'up' ? 'upvote' : 'downvote', 'definition', definitionId);
-         if (success) {
-            // Update local state optimistically
-            setSlangResults(prevResults => prevResults.map(slang => {
-                 if (slang.id === parentSlang.id && slang.communityDefinitions) {
-                    return {
-                        ...slang,
-                        communityDefinitions: slang.communityDefinitions.map(def => {
-                            if (def.id === definitionId) {
-                                return { ...def, [voteType === 'up' ? 'upvotes' : 'downvotes']: def[voteType === 'up' ? 'upvotes' : 'downvotes'] + 1 };
-                            }
-                            return def;
-                        })
-                    };
-                }
-                return slang;
-            }));
-        }
-         // Handle failure
+         if (!success) {
+            // Toast handled in handleVote
+         }
+         // No need to update local state here, handleVote->setAllSlangData->loadSlang handles it
    };
 
 
@@ -384,7 +413,7 @@ export default function Home() {
           <div className="space-y-6">
             {slangResults.map((slang) => (
               <div key={slang.id}>
-                <SlangCard slang={slang} onUpvote={() => handleVoteCallback(slang.id, 'upvote')} onDownvote={() => handleVoteCallback(slang.id, 'downvote')} />
+                <SlangCard slang={slang} onUpvote={() => handleTermVote(slang.id, 'upvote')} onDownvote={() => handleTermVote(slang.id, 'downvote')} />
                  {/* "In the Wild" only shows if it's the *only* result, was specifically searched, AND not AI generated */}
                  {slangResults.length === 1 && searchTerm && !slang.isAIGenerated && slang.term.toLowerCase() === searchTerm.toLowerCase() && slang.inTheWild && (
                     <InTheWildSection data={slang.inTheWild} term={slang.term} />
