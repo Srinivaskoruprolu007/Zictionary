@@ -1,28 +1,29 @@
 "use client"; // Needed for state and client-side interactions
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link'; // Import Link component
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/common/Header';
 import { SearchBar } from '@/components/search/SearchBar';
 import { CategoryFilter } from '@/components/common/CategoryFilter';
-import { RegionalFilter } from '@/components/common/RegionalFilter'; // Import RegionalFilter
+import { RegionalFilter } from '@/components/common/RegionalFilter';
 import { TrendingWords } from '@/components/common/TrendingWords';
 import { SlangCard } from '@/components/slang/SlangCard';
-import { CommunityDefinitions } from '@/components/slang/CommunityDefinitions'; // Import CommunityDefinitions
+import { CommunityDefinitions } from '@/components/slang/CommunityDefinitions';
 import { InTheWildSection } from '@/components/slang/InTheWildSection';
 import { Button } from '@/components/ui/button';
 import { BoomerTranslatorModal } from '@/components/common/BoomerTranslatorModal';
-import { SlangGeneratorModal } from '@/components/ai/SlangGeneratorModal'; // Import SlangGeneratorModal
-import { SlangBattleCard } from '@/components/gamification/SlangBattleCard'; // Import SlangBattleCard
-import type { SlangEntry, Category, SlangInTheWild, Region, SlangBattlePair, DefinitionDetail } from '@/types/slang'; // Update imports
+import { SlangGeneratorModal } from '@/components/ai/SlangGeneratorModal';
+import { SlangBattleCard } from '@/components/gamification/SlangBattleCard';
+import type { SlangEntry, Category, SlangInTheWild, Region, SlangBattlePair, DefinitionDetail } from '@/types/slang';
 import { getTweets } from '@/services/twitter';
 import { getTikTokVideos } from '@/services/tiktok';
 import { getRedditPosts } from '@/services/reddit';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Bot, PlusCircle } from 'lucide-react'; // Import new icons
+import { AlertCircle, Bot, PlusCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Separator } from '@/components/ui/separator'; // Import Separator
+import { Separator } from '@/components/ui/separator';
+import { defineSlang, DefineSlangInput, DefineSlangOutput } from '@/ai/flows/define-slang-flow'; // Import AI definition flow
 
 // --- Mock Data ---
 const MOCK_SLANG_DATA: SlangEntry[] = [
@@ -39,7 +40,6 @@ const MOCK_SLANG_DATA: SlangEntry[] = [
   { id: '6', term: 'NPC', definition: 'Non-Player Character; Used to describe someone who seems to lack independent thought or acts predictably, like a background character in a video game.', example: 'He just stands there nodding, total NPC vibes.', tone: 'sarcastic', categories: ['gaming', 'internet', 'social'], freshness: 'fresh', region: 'Global', createdAt: new Date(2023, 8, 1), upvotes: 600, downvotes: 150, approved: true, origin: 'Video game terminology, adopted as internet slang.' },
    { id: '7', term: 'Skibidi', definition: 'Originating from a viral YouTube series featuring bizarre singing toilet characters. Often used nonsensically or to refer to the trend itself.', example: 'What is this skibidi toilet thing everyone is talking about?', tone: 'playful', categories: ['internet'], freshness: 'fresh', region: 'Global', createdAt: new Date(2023, 9, 1), upvotes: 450, downvotes: 200, approved: true, origin: 'YouTube series "Skibidi Toilet" by DaFuq!?Boom!' },
    { id: '10', term: 'Ate', definition: 'Similar to "slay," meaning someone did something extremely well or looked amazing.', example: "She absolutely ate that performance.", tone: 'sincere', categories: ['social', 'fashion'], freshness: 'fresh', region: 'Global', createdAt: new Date(2023, 11, 1), upvotes: 950, downvotes: 35, approved: true, origin: 'AAVE, popularized online.' },
-
 ];
 
 const MOCK_TRENDING_WORDS = [
@@ -60,9 +60,9 @@ const MOCK_BATTLE: SlangBattlePair = {
 // --- Mock Fetch Functions ---
 async function fetchSlang(term: string, categories: Category[], region: Region): Promise<SlangEntry[]> {
   console.log(`Fetching slang for term: "${term}", categories: ${categories.join(', ')}, region: ${region}`);
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
 
-  let results = MOCK_SLANG_DATA.filter(entry => entry.region === region || entry.region === 'Global'); // Filter by region
+  let results = MOCK_SLANG_DATA.filter(entry => entry.region === region || entry.region === 'Global' || entry.region === 'Unknown'); // Include 'Unknown' region
 
   if (term) {
     results = results.filter(entry =>
@@ -115,6 +115,12 @@ async function handleVote(id: string, type: 'upvote' | 'downvote', target: 'term
     // Find the item and update its count locally (in real app, call API)
      const itemIndex = MOCK_SLANG_DATA.findIndex(item => item.id === id);
      if (itemIndex > -1) {
+        // Cannot vote on AI generated entries for now
+        if (MOCK_SLANG_DATA[itemIndex].isAIGenerated) {
+            console.log("Voting disabled for AI generated entries.");
+            return false;
+        }
+
         if (target === 'term') {
             if (type === 'upvote') MOCK_SLANG_DATA[itemIndex].upvotes += 1;
             else MOCK_SLANG_DATA[itemIndex].downvotes += 1;
@@ -135,6 +141,43 @@ async function handleBattleVote(battleId: string, winningTermId: string): Promis
     // In real app: Record vote, update stats, maybe fetch next battle
 }
 
+// Function to generate AI definition
+async function generateAIDefinition(term: string): Promise<SlangEntry | null> {
+    console.log(`Generating AI definition for: "${term}"`);
+    try {
+        const input: DefineSlangInput = { term };
+        const output: DefineSlangOutput = await defineSlang(input);
+
+        // Create a SlangEntry object from the AI output
+        const aiEntry: SlangEntry = {
+            id: `ai-${term.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`, // Generate a unique ID
+            term: term, // Use the original searched term for consistency
+            definition: output.definition,
+            example: output.example,
+            tone: output.tone,
+            categories: output.categories,
+            freshness: output.freshness,
+            region: 'Unknown', // AI doesn't determine region yet
+            createdAt: new Date(),
+            upvotes: 0, // AI entries start with 0 votes
+            downvotes: 0,
+            submittedBy: 'Zictionary AI',
+            approved: true, // Assume AI definitions are approved
+            isAIGenerated: true, // Flag as AI generated
+            // AI doesn't provide these details
+            origin: undefined,
+            thenVsNow: undefined,
+            pronunciationUrl: undefined,
+            communityDefinitions: [],
+            inTheWild: undefined, // No "in the wild" for AI generated on the fly
+        };
+        return aiEntry;
+    } catch (err) {
+        console.error(`AI definition generation failed for "${term}":`, err);
+        return null;
+    }
+}
+
 
 // --- Component ---
 export default function Home() {
@@ -144,21 +187,41 @@ export default function Home() {
 
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
-  const [selectedRegion, setSelectedRegion] = useState<Region>(initialRegion); // Add region state
+  const [selectedRegion, setSelectedRegion] = useState<Region>(initialRegion);
   const [slangResults, setSlangResults] = useState<SlangEntry[]>([]);
   const [currentBattle, setCurrentBattle] = useState<SlangBattlePair | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false); // State for AI generation loading
   const [isBattleLoading, setIsBattleLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isTranslatorOpen, setIsTranslatorOpen] = useState(false);
-  const [isGeneratorOpen, setIsGeneratorOpen] = useState(false); // State for Slang Generator Modal
+  const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
 
 
   const loadSlang = useCallback(async (term: string, categories: Category[], region: Region) => {
     setIsLoading(true);
+    setIsGeneratingAI(false); // Reset AI generating state
     setError(null);
+    setSlangResults([]); // Clear previous results
+
     try {
-      const results = await fetchSlang(term, categories, region);
+      let results = await fetchSlang(term, categories, region);
+
+      // If no results found and a specific term was searched, try AI generation
+      if (results.length === 0 && term.trim() && categories.length === 0 && region === 'Global') {
+        console.log(`No results for "${term}", attempting AI generation...`);
+        setIsGeneratingAI(true); // Set AI generating state
+        const aiResult = await generateAIDefinition(term.trim());
+         setIsGeneratingAI(false); // Unset AI generating state after attempt
+        if (aiResult) {
+            console.log(`AI generated definition for "${term}" successfully.`);
+            results = [aiResult]; // Use AI result
+        } else {
+            console.log(`AI generation failed or returned null for "${term}".`);
+             // Keep results empty to show "No results found" message
+        }
+      }
+
       setSlangResults(results);
     } catch (err) {
       console.error("Error fetching slang:", err);
@@ -166,6 +229,7 @@ export default function Home() {
       setSlangResults([]); // Clear results on error
     } finally {
       setIsLoading(false);
+      setIsGeneratingAI(false); // Ensure AI generating state is false at the end
     }
   }, []);
 
@@ -185,10 +249,14 @@ export default function Home() {
   useEffect(() => {
     loadSlang(searchTerm, selectedCategories, selectedRegion);
      // Update URL when search term or region changes
-     const params = new URLSearchParams();
-     if (searchTerm) params.set('search', searchTerm);
-     if (selectedRegion !== 'Global') params.set('region', selectedRegion);
-     window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+     const params = new URLSearchParams(window.location.search); // Preserve existing params
+     if (searchTerm) params.set('search', searchTerm); else params.delete('search');
+     if (selectedRegion !== 'Global') params.set('region', selectedRegion); else params.delete('region');
+     // Add category params later if needed
+
+     const newUrl = `${window.location.pathname}?${params.toString()}`;
+      // Use replaceState to avoid adding to browser history for filter/search changes
+     window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
 
   }, [loadSlang, searchTerm, selectedCategories, selectedRegion]); // Dependencies include region now
 
@@ -221,6 +289,9 @@ export default function Home() {
                 ? { ...item, [type === 'upvote' ? 'upvotes' : 'downvotes']: item[type === 'upvote' ? 'upvotes' : 'downvotes'] + 1 }
                 : item
              ));
+        } else {
+            // Optionally show a toast or message for disabled voting on AI entries
+            console.log("Voting might be disabled for this entry.");
         }
         // Handle failure (e.g., show toast)
     };
@@ -230,7 +301,13 @@ export default function Home() {
         const parentSlang = slangResults.find(slang => slang.communityDefinitions?.some(def => def.id === definitionId));
         if (!parentSlang) return;
 
-        const success = await handleVote(parentSlang.id, voteType, 'definition', definitionId);
+        // Prevent voting on definitions of AI generated entries (though they shouldn't have any)
+        if (parentSlang.isAIGenerated) {
+             console.log("Voting disabled for community definitions of AI generated entries.");
+             return;
+        }
+
+        const success = await handleVote(parentSlang.id, voteType === 'up' ? 'upvote' : 'downvote', 'definition', definitionId);
          if (success) {
             // Update local state optimistically
             setSlangResults(prevResults => prevResults.map(slang => {
@@ -291,6 +368,12 @@ export default function Home() {
              <Skeleton className="h-64 w-full" />
              <Skeleton className="h-64 w-full" />
            </div>
+        ) : isGeneratingAI ? (
+            <div className="text-center text-muted-foreground mt-10">
+                <Bot className="h-8 w-8 mx-auto mb-2 animate-pulse text-primary" />
+                <p className="text-lg font-medium">AI is cooking up a definition for "{searchTerm}"...</p>
+                <p className="text-sm mt-1">This might take a moment.</p>
+            </div>
         ) : error ? (
              <Alert variant="destructive" className="mt-6">
                 <AlertCircle className="h-4 w-4" />
@@ -302,16 +385,16 @@ export default function Home() {
             {slangResults.map((slang) => (
               <div key={slang.id}>
                 <SlangCard slang={slang} onUpvote={() => handleVoteCallback(slang.id, 'upvote')} onDownvote={() => handleVoteCallback(slang.id, 'downvote')} />
-                 {/* "In the Wild" only shows if it's the *only* result and was specifically searched */}
-                 {slangResults.length === 1 && searchTerm && slang.term.toLowerCase() === searchTerm.toLowerCase() && slang.inTheWild && (
+                 {/* "In the Wild" only shows if it's the *only* result, was specifically searched, AND not AI generated */}
+                 {slangResults.length === 1 && searchTerm && !slang.isAIGenerated && slang.term.toLowerCase() === searchTerm.toLowerCase() && slang.inTheWild && (
                     <InTheWildSection data={slang.inTheWild} term={slang.term} />
                  )}
-                 {/* Community Definitions */}
-                 {slangResults.length === 1 && searchTerm && slang.term.toLowerCase() === searchTerm.toLowerCase() && (
+                 {/* Community Definitions - Only show if it's the *only* result, specifically searched, AND not AI generated */}
+                 {slangResults.length === 1 && searchTerm && !slang.isAIGenerated && slang.term.toLowerCase() === searchTerm.toLowerCase() && (
                      <CommunityDefinitions definitions={slang.communityDefinitions} onVote={handleDefinitionVote} />
                  )}
-                 {/* Add Definition Button for single result view */}
-                 {slangResults.length === 1 && searchTerm && slang.term.toLowerCase() === searchTerm.toLowerCase() && (
+                 {/* Add Definition Button for single result view (and not AI generated) */}
+                 {slangResults.length === 1 && searchTerm && !slang.isAIGenerated && slang.term.toLowerCase() === searchTerm.toLowerCase() && (
                      <div className="mt-4 text-center">
                          <Button variant="outline" size="sm">
                              <PlusCircle className="mr-2 h-4 w-4" /> Add Your Definition
@@ -325,7 +408,6 @@ export default function Home() {
            <div className="text-center text-muted-foreground mt-10">
              <p className="text-lg font-medium">No results found {searchTerm ? `for "${searchTerm}"` : ''} {selectedCategories.length > 0 ? `in selected categories` : ''} {selectedRegion !== 'Global' ? ` in ${selectedRegion}` : ''}.</p>
              <p className="text-sm mt-2">Try searching for another term, adjusting filters, or changing the region. Maybe submit this word?</p>
-              {/* TODO: Add Submit New Word button here */}
                <Button variant="outline" size="sm" className="mt-4">
                  <PlusCircle className="mr-2 h-4 w-4" /> Submit New Slang
                </Button>

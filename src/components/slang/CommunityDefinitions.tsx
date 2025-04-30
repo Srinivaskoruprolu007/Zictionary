@@ -11,6 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 interface CommunityDefinitionsProps {
   definitions?: DefinitionDetail[];
   onVote: (definitionId: string, voteType: 'up' | 'down') => void; // Function to handle voting
+  // Removed isAIGenerated prop, as this component shouldn't render if the parent is AI generated
 }
 
 // Function to map tags to badge variants or colors
@@ -25,6 +26,8 @@ const getTagVariant = (tag: DefinitionTag): 'default' | 'secondary' | 'destructi
 }
 
 export function CommunityDefinitions({ definitions, onVote }: CommunityDefinitionsProps) {
+  // Component should not render if parent is AI generated (handled in page.tsx)
+  // This check is an additional safeguard.
   if (!definitions || definitions.length === 0) {
     return (
         <div className="mt-6 text-center text-muted-foreground">
@@ -55,6 +58,7 @@ export function CommunityDefinitions({ definitions, onVote }: CommunityDefinitio
             </div>
             <div className="flex justify-between items-center text-xs text-muted-foreground">
               <div className="flex items-center gap-2">
+                {/* Voting is handled by the onVote prop */}
                 <Button variant="ghost" size="sm" onClick={() => onVote(def.id, 'up')} className="h-7 px-2 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/50">
                   <ArrowUp className="h-3 w-3 mr-1" /> {def.upvotes}
                 </Button>
