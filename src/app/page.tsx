@@ -1,3 +1,4 @@
+
 "use client"; // Needed for state and client-side interactions
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -134,6 +135,82 @@ export default function Home() {
       return MOCK_BATTLE;
   }, []);
 
+  // Function to generate AI definition
+  const generateAIDefinition = useCallback(async (term: string): Promise<SlangEntry | null> => {
+      console.log(`Generating AI definition for: "${term}"`);
+      try {
+          const input: DefineSlangInput = { term };
+          const output: DefineSlangOutput = await defineSlang(input);
+
+          // Create a SlangEntry object from the AI output
+          const aiEntry: SlangEntry = {
+              id: `ai-${term.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`, // Generate a unique ID
+              term: term, // Use the original searched term for consistency
+              definition: output.definition,
+              example: output.example,
+              tone: output.tone,
+              categories: output.categories,
+              freshness: output.freshness,
+              region: 'Unknown', // AI doesn't determine region yet
+              createdAt: new Date(),
+              upvotes: 0, // AI entries start with 0 votes
+              downvotes: 0,
+              submittedBy: 'Zictionary AI',
+              approved: true, // Assume AI definitions are approved
+              isAIGenerated: true, // Flag as AI generated
+              // AI doesn't provide these details
+              origin: undefined,
+              thenVsNow: undefined,
+              pronunciationUrl: undefined,
+              communityDefinitions: [],
+              inTheWild: undefined, // No "in the wild" for AI generated on the fly
+          };
+          return aiEntry;
+      } catch (err) {
+          console.error(`AI definition generation failed for "${term}":`, err);
+          return null;
+      }
+  }, []); // No dependencies needed for this specific function
+
+
+  // Define loadSlang before handleVote which uses it in dependencies
+  const loadSlang = useCallback(async (term: string, categories: Category[], region: Region) => {
+    setIsLoading(true);
+    setIsGeneratingAI(false); // Reset AI generating state
+    setError(null);
+    setSlangResults([]); // Clear previous results
+
+    try {
+      let results = await fetchSlang(term, categories, region);
+
+      // If no results found and a specific term was searched, try AI generation
+      if (results.length === 0 && term.trim() && categories.length === 0 && region === 'Global') {
+        console.log(`No results for "${term}", attempting AI generation...`);
+        setIsGeneratingAI(true); // Set AI generating state
+        const aiResult = await generateAIDefinition(term.trim());
+         setIsGeneratingAI(false); // Unset AI generating state after attempt
+        if (aiResult) {
+            console.log(`AI generated definition for "${term}" successfully.`);
+            results = [aiResult]; // Use AI result
+             // Optionally add the AI result to the main data pool if desired
+            // setAllSlangData(prev => [...prev, aiResult]);
+        } else {
+            console.log(`AI generation failed or returned null for "${term}".`);
+             // Keep results empty to show "No results found" message
+        }
+      }
+
+      setSlangResults(results);
+    } catch (err) {
+      console.error("Error fetching slang:", err);
+      setError("Failed to load slang. Please try again.");
+      setSlangResults([]); // Clear results on error
+    } finally {
+      setIsLoading(false);
+      setIsGeneratingAI(false); // Ensure AI generating state is false at the end
+    }
+  }, [fetchSlang, generateAIDefinition]); // Added dependencies
+
   // Mock upvote/downvote functions (Updates allSlangData state)
    const handleVote = useCallback(async (id: string, type: 'upvote' | 'downvote', target: 'term' | 'definition', definitionId?: string): Promise<boolean> => {
     console.log(`${type} received for ${target} ID: ${id}` + (definitionId ? ` (Def ID: ${definitionId})` : ''));
@@ -207,86 +284,18 @@ export default function Home() {
       console.log(`Processing vote for battle ${battleId}, winner: ${winningTermId}`);
       await new Promise(resolve => setTimeout(resolve, 200));
       // In real app: Record vote, update stats, maybe fetch next battle
-      toast({
-          title: "Vote Recorded!",
-          description: `You voted for "${allSlangData.find(s=>s.id === winningTermId)?.term}".`,
-      });
+      const winningTerm = allSlangData.find(s=>s.id === winningTermId)?.term;
+      if (winningTerm) {
+        toast({
+            title: "Vote Recorded!",
+            description: `You voted for "${winningTerm}".`,
+        });
+      } else {
+          console.warn("Winning term not found for toast notification");
+      }
+
   }, [toast, allSlangData]); // Add toast dependency
 
-  // Function to generate AI definition
-  const generateAIDefinition = useCallback(async (term: string): Promise<SlangEntry | null> => {
-      console.log(`Generating AI definition for: "${term}"`);
-      try {
-          const input: DefineSlangInput = { term };
-          const output: DefineSlangOutput = await defineSlang(input);
-
-          // Create a SlangEntry object from the AI output
-          const aiEntry: SlangEntry = {
-              id: `ai-${term.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`, // Generate a unique ID
-              term: term, // Use the original searched term for consistency
-              definition: output.definition,
-              example: output.example,
-              tone: output.tone,
-              categories: output.categories,
-              freshness: output.freshness,
-              region: 'Unknown', // AI doesn't determine region yet
-              createdAt: new Date(),
-              upvotes: 0, // AI entries start with 0 votes
-              downvotes: 0,
-              submittedBy: 'Zictionary AI',
-              approved: true, // Assume AI definitions are approved
-              isAIGenerated: true, // Flag as AI generated
-              // AI doesn't provide these details
-              origin: undefined,
-              thenVsNow: undefined,
-              pronunciationUrl: undefined,
-              communityDefinitions: [],
-              inTheWild: undefined, // No "in the wild" for AI generated on the fly
-          };
-          return aiEntry;
-      } catch (err) {
-          console.error(`AI definition generation failed for "${term}":`, err);
-          return null;
-      }
-  }, []); // No dependencies needed for this specific function
-
-
-  const loadSlang = useCallback(async (term: string, categories: Category[], region: Region) => {
-    setIsLoading(true);
-    setIsGeneratingAI(false); // Reset AI generating state
-    setError(null);
-    setSlangResults([]); // Clear previous results
-
-    try {
-      let results = await fetchSlang(term, categories, region);
-
-      // If no results found and a specific term was searched, try AI generation
-      if (results.length === 0 && term.trim() && categories.length === 0 && region === 'Global') {
-        console.log(`No results for "${term}", attempting AI generation...`);
-        setIsGeneratingAI(true); // Set AI generating state
-        const aiResult = await generateAIDefinition(term.trim());
-         setIsGeneratingAI(false); // Unset AI generating state after attempt
-        if (aiResult) {
-            console.log(`AI generated definition for "${term}" successfully.`);
-            results = [aiResult]; // Use AI result
-             // Optionally add the AI result to the main data pool if desired
-            // setAllSlangData(prev => [...prev, aiResult]);
-        } else {
-            console.log(`AI generation failed or returned null for "${term}".`);
-             // Keep results empty to show "No results found" message
-        }
-      }
-
-      setSlangResults(results);
-    } catch (err) {
-      console.error("Error fetching slang:", err);
-      setError("Failed to load slang. Please try again.");
-      setSlangResults([]); // Clear results on error
-    } finally {
-      setIsLoading(false);
-      setIsGeneratingAI(false); // Ensure AI generating state is false at the end
-    }
-  }, [fetchSlang, generateAIDefinition]); // Added dependencies
 
    const loadBattle = useCallback(async () => {
     setIsBattleLoading(true);
@@ -453,3 +462,4 @@ export default function Home() {
     </div>
   );
 }
+
