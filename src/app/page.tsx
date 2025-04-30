@@ -2,7 +2,7 @@
 "use client"; // Needed for state and client-side interactions
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
+import Link from 'next/link'; // Import Suspense from React
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/common/Header';
 import { SearchBar } from '@/components/search/SearchBar';
@@ -26,6 +26,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from '@/components/ui/separator';
 import { defineSlang, DefineSlangInput, DefineSlangOutput } from '@/ai/flows/define-slang-flow'; // Import AI definition flow
 import { useToast } from '@/hooks/use-toast'; // Import useToast
+import { Suspense } from 'react';
 
 // --- Mock Data (Initial State) ---
 const INITIAL_MOCK_SLANG_DATA: SlangEntry[] = [
@@ -62,7 +63,6 @@ const MOCK_BATTLE: SlangBattlePair = {
 
 // --- Component ---
 export default function Home() {
-  const searchParams = useSearchParams();
   const initialSearchTerm = searchParams.get('search') || '';
   const initialRegion = (searchParams.get('region') as Region) || 'Global'; // Default to Global
 
@@ -79,6 +79,10 @@ export default function Home() {
   const [isTranslatorOpen, setIsTranslatorOpen] = useState(false);
   const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
   const { toast } = useToast(); // Use the toast hook
+
+  // Wrap useSearchParams in a Suspense boundary
+    const searchParams = useSearchParams();
+
 
 
   // --- Mock Fetch Functions (Now using allSlangData state) ---
@@ -368,7 +372,9 @@ export default function Home() {
 
 
   return (
-    <div className="flex flex-col min-h-screen gradient-bg">
+      <Suspense fallback={<div className="flex justify-center items-center min-h-screen">Loading...</div>}>
+
+          <div className="flex flex-col min-h-screen gradient-bg">
       <Header />
       <main className="flex-grow container mx-auto px-4 py-8 max-w-4xl">
         <div className="flex justify-center mb-6">
@@ -459,7 +465,9 @@ export default function Home() {
 
         <BoomerTranslatorModal isOpen={isTranslatorOpen} onOpenChange={setIsTranslatorOpen} />
         <SlangGeneratorModal isOpen={isGeneratorOpen} onOpenChange={setIsGeneratorOpen} />
-    </div>
+          </div>
+      </Suspense>
+
   );
 }
 
