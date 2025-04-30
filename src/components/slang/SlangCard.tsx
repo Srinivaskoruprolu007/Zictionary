@@ -2,7 +2,7 @@ import type { SlangEntry } from '@/types/slang';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bookmark, Share2, Volume2, ArrowUp, ArrowDown, History } from 'lucide-react';
+import { Bookmark, Share2, Volume2, ArrowUp, ArrowDown, History, Globe } from 'lucide-react'; // Added Globe icon
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SlangFreshnessMeter } from './SlangFreshnessMeter';
 
@@ -35,6 +35,12 @@ export function SlangCard({ slang, onUpvote, onDownvote }: SlangCardProps) {
     }
   };
 
+   // Determine the definition to show (prioritize main one)
+  const mainDefinition = slang.definition;
+  const mainExample = slang.example;
+  const mainTone = slang.tone;
+
+
   return (
     <Card className="w-full transition-shadow duration-300 hover:shadow-lg dark:hover:shadow-primary/20">
       <CardHeader>
@@ -56,7 +62,15 @@ export function SlangCard({ slang, onUpvote, onDownvote }: SlangCardProps) {
                 </Tooltip>
               </TooltipProvider>
             </CardTitle>
-            <CardDescription className="text-sm text-muted-foreground capitalize">{slang.tone} Tone</CardDescription>
+             <CardDescription className="text-sm text-muted-foreground capitalize flex items-center gap-1">
+                 {mainTone} Tone
+                 {slang.region !== 'Global' && (
+                    <>
+                        <span className="mx-1">•</span>
+                        <Globe className="h-3 w-3 inline-block mr-0.5" /> {slang.region}
+                    </>
+                 )}
+             </CardDescription>
           </div>
           <div className="flex items-center space-x-1">
             <TooltipProvider>
@@ -83,11 +97,13 @@ export function SlangCard({ slang, onUpvote, onDownvote }: SlangCardProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-foreground">{slang.definition}</p>
+        {/* Display Main Definition */}
+        <p className="text-foreground">{mainDefinition}</p>
         <div>
           <h4 className="text-sm font-semibold text-muted-foreground mb-1">Example:</h4>
-          <p className="italic text-foreground/90">"{slang.example}"</p>
+          <p className="italic text-foreground/90">"{mainExample}"</p>
         </div>
+
         {slang.thenVsNow && (
           <div className="p-3 rounded-md bg-secondary dark:bg-card">
              <h4 className="text-sm font-semibold text-secondary-foreground dark:text-primary-foreground mb-1 flex items-center gap-1">
@@ -122,6 +138,7 @@ export function SlangCard({ slang, onUpvote, onDownvote }: SlangCardProps) {
       </CardContent>
       <CardFooter className="flex justify-between items-center">
         <div className="flex items-center space-x-2">
+           {/* These votes now apply to the main term/definition */}
           <Button variant="ghost" size="sm" onClick={() => onUpvote(slang.id)} className="text-green-600 hover:text-green-700 hover:bg-green-100 dark:hover:bg-green-900/50">
             <ArrowUp className="h-4 w-4 mr-1" /> {slang.upvotes}
           </Button>
