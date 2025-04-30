@@ -1,19 +1,34 @@
 import * as React from "react"
 
+// Define the breakpoint for mobile devices (Tailwind's `md` breakpoint is 768px)
 const MOBILE_BREAKPOINT = 768
 
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+/**
+ * Custom hook to determine if the current screen width is considered mobile.
+ * @returns {boolean} `true` if the screen width is less than the mobile breakpoint, `false` otherwise. Returns `false` during server-side rendering.
+ */
+export function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = React.useState<boolean>(false); // Default to false SSR
 
   React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    // Ensure window is defined (client-side)
+    if (typeof window === 'undefined') {
+      return;
     }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
 
-  return !!isMobile
+    const checkDevice = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    };
+
+    // Initial check
+    checkDevice();
+
+    // Add resize listener
+    window.addEventListener('resize', checkDevice);
+
+    // Cleanup listener on component unmount
+    return () => window.removeEventListener('resize', checkDevice);
+  }, []); // Empty dependency array ensures this runs only once on mount client-side
+
+  return isMobile;
 }

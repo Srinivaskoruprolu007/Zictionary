@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+const { fontFamily } = require("tailwindcss/defaultTheme")
 
 export default {
     darkMode: ["class"],
@@ -8,7 +9,17 @@ export default {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
   	extend: {
+       fontFamily: {
+        sans: ["var(--font-poppins)", ...fontFamily.sans],
+      },
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
@@ -90,5 +101,12 @@ export default {
   		}
   	}
   },
+   safelist: [ // Ensure dynamic color classes for SlangFreshnessMeter are generated
+     'bg-green-500', 'text-green-600', 'dark:text-green-400',
+     'bg-blue-500', 'text-blue-600', 'dark:text-blue-400',
+     'bg-yellow-500', 'text-yellow-600', 'dark:text-yellow-400',
+     'bg-orange-500', 'text-orange-600', 'dark:text-orange-400',
+     'bg-red-500', 'text-red-600', 'dark:text-red-400'
+   ],
   plugins: [require("tailwindcss-animate")],
 } satisfies Config;
