@@ -1,8 +1,8 @@
-# Slangopedia - Unveiling the Language of Now
+# Zictionary - Unveiling the Language of Now
 
 ## Project Overview
 
-Slangopedia is a dynamic web application designed to bridge the gap between generations and cultures by helping users discover and understand the ever-evolving world of slang. Whether you're a curious learner, a language enthusiast, or someone simply trying to keep up with the times, Slangopedia provides a comprehensive platform to explore new slang words, their meanings, origins, and usage.
+Zictionary is a dynamic web application designed to bridge the gap between generations and cultures by helping users discover and understand the ever-evolving world of slang. Whether you're a curious learner, a language enthusiast, or someone simply trying to keep up with the times, Zictionary provides a comprehensive platform to explore new slang words, their meanings, origins, and usage.
 
 ### Key Features
 
