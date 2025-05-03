@@ -22,7 +22,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${poppins.variable} font-sans antialiased`}>
+      {/* Added suppressHydrationWarning to body to potentially fix extension-related hydration issues */}
+      <body className={`${poppins.variable} font-sans antialiased`} suppressHydrationWarning={true}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
