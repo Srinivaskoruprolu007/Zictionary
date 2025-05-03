@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react'; // Ensure React and Suspense are imported
 import Link from 'next/link'; // Ensure Link is imported
 import { useSearchParams } from 'next/navigation';
+import { format, subDays, subMonths, subYears } from 'date-fns'; // Import date-fns functions
 import { Header } from '@/components/common/Header';
 import { SearchBar } from '@/components/search/SearchBar';
 import { CategoryFilter } from '@/components/common/CategoryFilter';
@@ -26,28 +27,38 @@ import { Separator } from '@/components/ui/separator';
 import { defineSlang, DefineSlangInput, DefineSlangOutput } from '@/ai/flows/define-slang-flow'; // Import AI definition flow
 import { useToast } from '@/hooks/use-toast'; // Import useToast
 
-// --- Mock Data (Initial State) ---
-const INITIAL_MOCK_SLANG_DATA: SlangEntry[] = [
-  { id: '1', term: 'Rizz', definition: 'Short for charisma; the ability to charm or flirt successfully.', example: 'He\'s got unspoken rizz.', tone: 'playful', categories: ['social'], freshness: 'fresh', region: 'Global', createdAt: new Date(2023, 5, 1), upvotes: 1502, downvotes: 55, approved: true, submittedBy: 'ZMaster', thenVsNow: { traditionalMeaning: 'Not applicable (new term)', genZMeaning: 'Skill in charming potential romantic partners.' }, origin: 'Popularized by streamer Kai Cenat',
-    communityDefinitions: [
-        { id: 'def1-1', definition: "Like, when someone's smooth with words and actions, especially when flirting.", example: "Dude walked up to her and just started rizzing, it was wild.", tone: 'playful', tags: ['accurate'], upvotes: 120, downvotes: 5, submittedBy: 'User123', createdAt: new Date(2023, 6, 10) },
-        { id: 'def1-2', definition: "It's the aura someone gives off that makes people attracted to them, doesn't even have to be romantic.", example: "The way she commands the room? Pure rizz.", tone: 'sincere', tags: ['accurate', 'funny'], upvotes: 85, downvotes: 2, submittedBy: 'AnotherUser', createdAt: new Date(2023, 6, 15) }
-    ]
-  },
-  { id: '2', term: 'Bussin\'', definition: 'Used to describe something that is really good, especially food.', example: 'This pizza is bussin\' bussin\'.', tone: 'sincere', categories: ['food', 'social'], freshness: 'established', region: 'US-East', createdAt: new Date(2022, 1, 10), upvotes: 987, downvotes: 102, approved: true, origin: 'African American Vernacular English (AAVE), popularized on TikTok' },
-  { id: '3', term: 'Mid', definition: 'Used to describe something as mediocre or average, often unimpressive.', example: 'The movie was kinda mid, tbh.', tone: 'neutral', categories: ['social', 'internet'], freshness: 'established', region: 'Global', createdAt: new Date(2022, 8, 20), upvotes: 765, downvotes: 88, approved: true },
-  { id: '4', term: 'Bet', definition: 'An affirmation, agreement, or response meaning "Okay," "Alright," or "For sure."', example: 'Wanna grab food later? "Bet."', tone: 'neutral', categories: ['social'], freshness: 'established', region: 'Global', createdAt: new Date(2021, 3, 5), upvotes: 1100, downvotes: 30, approved: true, thenVsNow: { traditionalMeaning: 'A wager or agreement based on an uncertain outcome.', genZMeaning: 'A simple affirmation or agreement.' } },
-  { id: '5', term: 'Slay', definition: 'To do something exceptionally well; to impress or succeed.', example: 'She slayed that presentation!', tone: 'sincere', categories: ['social', 'fashion', 'emotions'], freshness: 'established', region: 'Global', createdAt: new Date(2020, 10, 15), upvotes: 1350, downvotes: 45, approved: true, origin: 'Ballroom culture, popularized through RuPaul\'s Drag Race and general internet usage.'},
-  { id: '6', term: 'NPC', definition: 'Non-Player Character; Used to describe someone who seems to lack independent thought or acts predictably, like a background character in a video game.', example: 'He just stands there nodding, total NPC vibes.', tone: 'sarcastic', categories: ['gaming', 'internet', 'social'], freshness: 'fresh', region: 'Global', createdAt: new Date(2023, 8, 1), upvotes: 600, downvotes: 150, approved: true, origin: 'Video game terminology, adopted as internet slang.' },
-   { id: '7', term: 'Skibidi', definition: 'Originating from a viral YouTube series featuring bizarre singing toilet characters. Often used nonsensically or to refer to the trend itself.', example: 'What is this skibidi toilet thing everyone is talking about?', tone: 'playful', categories: ['internet'], freshness: 'fresh', region: 'Global', createdAt: new Date(2023, 9, 1), upvotes: 450, downvotes: 200, approved: true, origin: 'YouTube series "Skibidi Toilet" by DaFuq!?Boom!' },
-   { id: '10', term: 'Ate', definition: 'Similar to "slay," meaning someone did something extremely well or looked amazing.', example: "She absolutely ate that performance.", tone: 'sincere', categories: ['social', 'fashion'], freshness: 'fresh', region: 'Global', createdAt: new Date(2023, 11, 1), upvotes: 950, downvotes: 35, approved: true, origin: 'AAVE, popularized online.' },
-];
+// --- Dynamic Mock Data Generation ---
+const generateMockData = (): SlangEntry[] => {
+  const now = new Date();
+  return [
+    { id: '1', term: 'Rizz', definition: 'Short for charisma; the ability to charm or flirt successfully.', example: 'He\'s got unspoken rizz.', tone: 'playful', categories: ['social'], freshness: 'fresh', region: 'Global', createdAt: subDays(now, 3), upvotes: 1502, downvotes: 55, approved: true, submittedBy: 'ZMaster', thenVsNow: { traditionalMeaning: 'Not applicable (new term)', genZMeaning: 'Skill in charming potential romantic partners.' }, origin: 'Popularized by streamer Kai Cenat',
+      communityDefinitions: [
+          { id: 'def1-1', definition: "Like, when someone's smooth with words and actions, especially when flirting.", example: "Dude walked up to her and just started rizzing, it was wild.", tone: 'playful', tags: ['accurate'], upvotes: 120, downvotes: 5, submittedBy: 'User123', createdAt: subDays(now, 2) },
+          { id: 'def1-2', definition: "It's the aura someone gives off that makes people attracted to them, doesn't even have to be romantic.", example: "The way she commands the room? Pure rizz.", tone: 'sincere', tags: ['accurate', 'funny'], upvotes: 85, downvotes: 2, submittedBy: 'AnotherUser', createdAt: subDays(now, 1) }
+      ]
+    },
+    { id: '2', term: 'Bussin\'', definition: 'Used to describe something that is really good, especially food.', example: 'This pizza is bussin\' bussin\'.', tone: 'sincere', categories: ['food', 'social'], freshness: 'established', region: 'US-East', createdAt: subMonths(now, 6), upvotes: 987, downvotes: 102, approved: true, origin: 'African American Vernacular English (AAVE), popularized on TikTok' },
+    { id: '3', term: 'Mid', definition: 'Used to describe something as mediocre or average, often unimpressive.', example: 'The movie was kinda mid, tbh.', tone: 'neutral', categories: ['social', 'internet'], freshness: 'established', region: 'Global', createdAt: subMonths(now, 9), upvotes: 765, downvotes: 88, approved: true },
+    { id: '4', term: 'Bet', definition: 'An affirmation, agreement, or response meaning "Okay," "Alright," or "For sure."', example: 'Wanna grab food later? "Bet."', tone: 'neutral', categories: ['social'], freshness: 'established', region: 'Global', createdAt: subYears(now, 1), upvotes: 1100, downvotes: 30, approved: true, thenVsNow: { traditionalMeaning: 'A wager or agreement based on an uncertain outcome.', genZMeaning: 'A simple affirmation or agreement.' } },
+    { id: '5', term: 'Slay', definition: 'To do something exceptionally well; to impress or succeed.', example: 'She slayed that presentation!', tone: 'sincere', categories: ['social', 'fashion', 'emotions'], freshness: 'established', region: 'Global', createdAt: subYears(now, 2), upvotes: 1350, downvotes: 45, approved: true, origin: 'Ballroom culture, popularized through RuPaul\'s Drag Race and general internet usage.'},
+    { id: '6', term: 'NPC', definition: 'Non-Player Character; Used to describe someone who seems to lack independent thought or acts predictably, like a background character in a video game.', example: 'He just stands there nodding, total NPC vibes.', tone: 'sarcastic', categories: ['gaming', 'internet', 'social'], freshness: 'fresh', region: 'Global', createdAt: subMonths(now, 4), upvotes: 600, downvotes: 150, approved: true, origin: 'Video game terminology, adopted as internet slang.' },
+    { id: '7', term: 'Skibidi', definition: 'Originating from a viral YouTube series featuring bizarre singing toilet characters. Often used nonsensically or to refer to the trend itself.', example: 'What is this skibidi toilet thing everyone is talking about?', tone: 'playful', categories: ['internet'], freshness: 'fresh', region: 'Global', createdAt: subMonths(now, 3), upvotes: 450, downvotes: 200, approved: true, origin: 'YouTube series "Skibidi Toilet" by DaFuq!?Boom!' },
+    { id: '8', term: 'Delulu', definition: 'Short for "delusional," often used playfully to describe someone who is overly optimistic or unrealistic, especially about relationships.', example: 'She thinks he\'ll text back? She\'s so delulu.', tone: 'playful', categories: ['social', 'internet', 'emotions'], freshness: 'fresh', region: 'Global', createdAt: subMonths(now, 2), upvotes: 880, downvotes: 40, approved: true, origin: 'K-Pop fan communities, spread online.' },
+    { id: '9', term: 'Situationship', definition: 'A romantic or sexual relationship that lacks clear definition, commitment, or labels.', example: 'We\'re not dating, it\'s more of a situationship.', tone: 'neutral', categories: ['social', 'emotions'], freshness: 'established', region: 'Global', createdAt: subMonths(now, 10), upvotes: 1200, downvotes: 60, approved: true },
+    { id: '10', term: 'Ate', definition: 'Similar to "slay," meaning someone did something extremely well or looked amazing.', example: "She absolutely ate that performance.", tone: 'sincere', categories: ['social', 'fashion'], freshness: 'fresh', region: 'Global', createdAt: subMonths(now, 1), upvotes: 950, downvotes: 35, approved: true, origin: 'AAVE, popularized online.' },
+    { id: '11', term: 'Based', definition: 'Used to describe someone who is authentic, speaks their mind, or holds an opinion confidently, regardless of popularity.', example: 'Saying pineapple belongs on pizza? That\'s based.', tone: 'neutral', categories: ['internet', 'social'], freshness: 'established', region: 'Global', createdAt: subYears(now, 1), upvotes: 700, downvotes: 110, approved: true, origin: 'Originally from rapper Lil B, evolved online.' },
+    { id: '12', term: 'Cheugy', definition: 'Describes something that is outdated, basic, or trying too hard to be trendy, often associated with millennial aesthetics.', example: 'Those wooden signs with cursive fonts are so cheugy.', tone: 'sarcastic', categories: ['fashion', 'social', 'internet'], freshness: 'waning', region: 'US-West', createdAt: subYears(now, 2), upvotes: 400, downvotes: 250, approved: true, origin: 'Popularized on TikTok in 2021.' },
+  ];
+};
+
+const INITIAL_MOCK_SLANG_DATA = generateMockData();
+
 const MOCK_TRENDING_WORDS = [
     { term: 'Rizz', id: '1' },
     { term: 'NPC', id: '6' },
     { term: 'Ate', id: '10' },
-    { term: 'Delulu', id: '8' }, // Assuming an ID 8 exists or will be added
-    { term: 'Situationship', id: '9' }, // Assuming an ID 9 exists or will be added
+    { term: 'Delulu', id: '8' },
+    { term: 'Situationship', id: '9' },
 ];
 const MOCK_BATTLE: SlangBattlePair = {
     id: 'battle1',
@@ -68,6 +79,7 @@ function HomePageContent() {
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<Region>(initialRegion);
   const [slangResults, setSlangResults] = useState<SlangEntry[]>([]);
+  // Initialize with dynamically generated data
   const [allSlangData, setAllSlangData] = useState<SlangEntry[]>(INITIAL_MOCK_SLANG_DATA);
   const [currentBattle, setCurrentBattle] = useState<SlangBattlePair | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -77,7 +89,6 @@ function HomePageContent() {
   const [isTranslatorOpen, setIsTranslatorOpen] = useState(false);
   const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
   const { toast } = useToast();
-
 
   // --- Mock Fetch Functions (Now using allSlangData state) ---
   const fetchSlang = useCallback(async (term: string, categories: Category[], region: Region): Promise<SlangEntry[]> => {
@@ -141,6 +152,54 @@ function HomePageContent() {
       return results;
   }, [allSlangData]); // Depend on allSlangData
 
+    // Define loadSlang before handleVote and generateAIDefinition which use it in dependencies
+    const loadSlang = useCallback(async (term: string, categories: Category[], region: Region) => {
+        setIsLoading(true);
+        setIsGeneratingAI(false); // Reset AI generating state
+        setError(null);
+        // setSlangResults([]); // Clear previous results visually later if needed, or keep for smoother transition
+
+        try {
+          let results = await fetchSlang(term, categories, region);
+
+          // If no results found and a specific term was searched, try AI generation
+          // Only trigger AI if specific conditions are met (term exists, no categories, global region)
+          if (results.length === 0 && term.trim() && categories.length === 0 && region === 'Global') {
+            console.log(`No results for "${term}", attempting AI generation...`);
+            setIsGeneratingAI(true); // Set AI generating state
+            // Call generateAIDefinition here (defined below, hoist or move generateAIDefinition above)
+             const aiResult = await generateAIDefinition(term.trim());
+             setIsGeneratingAI(false); // Unset AI generating state after attempt
+            if (aiResult) {
+                console.log(`AI generated definition for "${term}" successfully.`);
+                results = [aiResult]; // Use AI result
+                 // Optionally add the AI result to the main data pool if desired (consider implications)
+                 setAllSlangData(prev => {
+                   // Avoid adding duplicates if AI re-generates an existing term ID somehow
+                   if (!prev.some(entry => entry.id === aiResult.id)) {
+                       return [...prev, aiResult];
+                   }
+                   return prev;
+                 });
+            } else {
+                console.log(`AI generation failed or returned null for "${term}".`);
+                 // Keep results empty to show "No results found" message
+                 results = []; // Explicitly set to empty array
+            }
+          }
+
+          setSlangResults(results);
+        } catch (err) {
+          console.error("Error fetching slang:", err);
+          setError("Failed to load slang. The vibes might be off, try again?");
+          setSlangResults([]); // Clear results on error
+        } finally {
+          setIsLoading(false);
+          setIsGeneratingAI(false); // Ensure AI generating state is false at the end
+        }
+    }, [fetchSlang]); // Removed generateAIDefinition dependency here, will add below
+
+
   // Function to generate AI definition
   const generateAIDefinition = useCallback(async (term: string): Promise<SlangEntry | null> => {
       console.log(`Generating AI definition for: "${term}"`);
@@ -183,45 +242,10 @@ function HomePageContent() {
       }
   }, [toast]); // Added toast dependency
 
-  // Define loadSlang before handleVote which uses it in dependencies
-  const loadSlang = useCallback(async (term: string, categories: Category[], region: Region) => {
-    setIsLoading(true);
-    setIsGeneratingAI(false); // Reset AI generating state
-    setError(null);
-    // setSlangResults([]); // Clear previous results visually later if needed, or keep for smoother transition
+   // Now add generateAIDefinition to loadSlang's dependencies
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+   useEffect(() => { loadSlang(searchTerm, selectedCategories, selectedRegion) }, [generateAIDefinition]);
 
-    try {
-      let results = await fetchSlang(term, categories, region);
-
-      // If no results found and a specific term was searched, try AI generation
-      // Only trigger AI if specific conditions are met (term exists, no categories, global region)
-      if (results.length === 0 && term.trim() && categories.length === 0 && region === 'Global') {
-        console.log(`No results for "${term}", attempting AI generation...`);
-        setIsGeneratingAI(true); // Set AI generating state
-        const aiResult = await generateAIDefinition(term.trim());
-         setIsGeneratingAI(false); // Unset AI generating state after attempt
-        if (aiResult) {
-            console.log(`AI generated definition for "${term}" successfully.`);
-            results = [aiResult]; // Use AI result
-             // Optionally add the AI result to the main data pool if desired (consider implications)
-            // setAllSlangData(prev => [...prev, aiResult]);
-        } else {
-            console.log(`AI generation failed or returned null for "${term}".`);
-             // Keep results empty to show "No results found" message
-             results = []; // Explicitly set to empty array
-        }
-      }
-
-      setSlangResults(results);
-    } catch (err) {
-      console.error("Error fetching slang:", err);
-      setError("Failed to load slang. The vibes might be off, try again?");
-      setSlangResults([]); // Clear results on error
-    } finally {
-      setIsLoading(false);
-      setIsGeneratingAI(false); // Ensure AI generating state is false at the end
-    }
-  }, [fetchSlang, generateAIDefinition]); // Added dependencies
 
   // Mock upvote/downvote functions (Updates allSlangData state)
    const handleVote = useCallback(async (id: string, type: 'upvote' | 'downvote', target: 'term' | 'definition', definitionId?: string): Promise<boolean> => {
@@ -352,7 +376,14 @@ function HomePageContent() {
      }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadSlang, loadBattle, searchTerm, selectedCategories, selectedRegion]); // Only run on relevant state changes, loadSlang/loadBattle have their own deps
+  }, []); // Only run on initial mount - state changes below trigger re-fetches
+
+
+  // Effect to re-fetch data when search/filter state changes
+  useEffect(() => {
+      loadSlang(searchTerm, selectedCategories, selectedRegion);
+      // Update URL in a separate effect to avoid redundant fetches
+  }, [searchTerm, selectedCategories, selectedRegion, loadSlang]);
 
   // Separate effect for just updating URL on param changes to avoid re-running fetches unnecessarily
   useEffect(() => {
@@ -360,8 +391,9 @@ function HomePageContent() {
          const params = new URLSearchParams(window.location.search);
          if (searchTerm) params.set('search', searchTerm); else params.delete('search');
          if (selectedRegion !== 'Global') params.set('region', selectedRegion); else params.delete('region');
-         // Add category params later if needed
-         selectedCategories.forEach(cat => params.append('category', cat)); // Example for categories
+         // Clear existing category params before appending new ones
+         params.delete('category');
+         selectedCategories.forEach(cat => params.append('category', cat));
 
          const newUrl = `${window.location.pathname}?${params.toString()}`;
          window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
