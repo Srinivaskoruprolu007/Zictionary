@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+   serverActions: {
+    // Explicitly enable server actions for deployment robustness
+    enabled: true,
+  },
 };
 
 export default nextConfig;

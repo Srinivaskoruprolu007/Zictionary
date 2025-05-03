@@ -1,7 +1,7 @@
 
 "use client"; // Needed for state and client-side interactions
-import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link'; // Import Suspense from React
+import React, { useState, useEffect, useCallback, Suspense } from 'react'; // Ensure React and Suspense are imported
+import Link from 'next/link'; // Ensure Link is imported
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/common/Header';
 import { SearchBar } from '@/components/search/SearchBar';
@@ -25,7 +25,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from '@/components/ui/separator';
 import { defineSlang, DefineSlangInput, DefineSlangOutput } from '@/ai/flows/define-slang-flow'; // Import AI definition flow
 import { useToast } from '@/hooks/use-toast'; // Import useToast
-import { Suspense } from 'react';
+
 // --- Mock Data (Initial State) ---
 const INITIAL_MOCK_SLANG_DATA: SlangEntry[] = [
   { id: '1', term: 'Rizz', definition: 'Short for charisma; the ability to charm or flirt successfully.', example: 'He\'s got unspoken rizz.', tone: 'playful', categories: ['social'], freshness: 'fresh', region: 'Global', createdAt: new Date(2023, 5, 1), upvotes: 1502, downvotes: 55, approved: true, submittedBy: 'ZMaster', thenVsNow: { traditionalMeaning: 'Not applicable (new term)', genZMeaning: 'Skill in charming potential romantic partners.' }, origin: 'Popularized by streamer Kai Cenat',
@@ -55,28 +55,28 @@ const MOCK_BATTLE: SlangBattlePair = {
     term2: { id: '10', term: 'Ate' },
     question: "Which one's currently hitting harder?",
 };
-// --- Component ---
-export default function Home() {
-  // Get searchParams before using it
+
+// --- Component Wrapper for Suspense ---
+// Next.js recommends using Suspense at the layout level or higher
+// but for client components needing searchParams, wrapping the component using them is necessary.
+function HomePageContent() {
   const searchParams = useSearchParams();
-  
-  const initialSearchTerm = searchParams.get('search') || '';
-  const initialRegion = (searchParams.get('region') as Region) || 'Global'; // Default to Global
+  const initialSearchTerm = searchParams?.get('search') || '';
+  const initialRegion = (searchParams?.get('region') as Region) || 'Global';
+
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<Region>(initialRegion);
-  const [slangResults, setSlangResults] = useState<SlangEntry[]>([]); // Holds the currently displayed results
-  const [allSlangData, setAllSlangData] = useState<SlangEntry[]>(INITIAL_MOCK_SLANG_DATA); // Holds the "database"
+  const [slangResults, setSlangResults] = useState<SlangEntry[]>([]);
+  const [allSlangData, setAllSlangData] = useState<SlangEntry[]>(INITIAL_MOCK_SLANG_DATA);
   const [currentBattle, setCurrentBattle] = useState<SlangBattlePair | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isGeneratingAI, setIsGeneratingAI] = useState(false); // State for AI generation loading
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [isBattleLoading, setIsBattleLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isTranslatorOpen, setIsTranslatorOpen] = useState(false);
   const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
-  const { toast } = useToast(); // Use the toast hook
-  // Rest of the code remains the same...
-
+  const { toast } = useToast();
 
 
   // --- Mock Fetch Functions (Now using allSlangData state) ---
@@ -104,15 +104,30 @@ export default function Home() {
           const firstResultTerm = results[0].term;
           try {
               console.log(`Fetching 'in the wild' for: ${firstResultTerm}`);
-              const [tweets, tiktoks, redditPosts] = await Promise.all([
+              // Use Promise.allSettled for resilience if one API fails
+              const settledResults = await Promise.allSettled([
                   getTweets(firstResultTerm),
                   getTikTokVideos(firstResultTerm),
                   getRedditPosts(firstResultTerm)
               ]);
+
+              const tweets = settledResults[0].status === 'fulfilled' ? settledResults[0].value : [];
+              const tiktoks = settledResults[1].status === 'fulfilled' ? settledResults[1].value : [];
+              const redditPosts = settledResults[2].status === 'fulfilled' ? settledResults[2].value : [];
+
               // Create a new object for the result to avoid direct mutation
               results[0] = { ...results[0], inTheWild: { tweets, tiktoks, redditPosts } };
-          } catch (error) {
-              console.error("Failed to fetch 'in the wild' data:", error);
+
+              // Log errors for failed fetches
+              settledResults.forEach((result, index) => {
+                if (result.status === 'rejected') {
+                  const serviceName = ['Twitter', 'TikTok', 'Reddit'][index];
+                  console.error(`Failed to fetch 'in the wild' data from ${serviceName}:`, result.reason);
+                }
+              });
+
+          } catch (error) { // Catch potential errors in Promise.allSettled itself (unlikely)
+              console.error("Unexpected error fetching 'in the wild' data:", error);
               results[0] = { ...results[0], inTheWild: { tweets: [], tiktoks: [], redditPosts: [] } };
           }
       } else if (results.length > 0) {
@@ -125,13 +140,6 @@ export default function Home() {
 
       return results;
   }, [allSlangData]); // Depend on allSlangData
-
-  const fetchBattle = useCallback(async (): Promise<SlangBattlePair | null> => {
-      console.log("Fetching slang battle");
-      await new Promise(resolve => setTimeout(resolve, 300));
-      // In a real app, fetch a random or current battle
-      return MOCK_BATTLE;
-  }, []);
 
   // Function to generate AI definition
   const generateAIDefinition = useCallback(async (term: string): Promise<SlangEntry | null> => {
@@ -166,22 +174,27 @@ export default function Home() {
           return aiEntry;
       } catch (err) {
           console.error(`AI definition generation failed for "${term}":`, err);
+          toast({ // Inform user about AI failure
+            variant: "destructive",
+            title: "AI Generation Failed",
+            description: `Could not generate a definition for "${term}". Please try again later.`,
+          });
           return null;
       }
-  }, []); // No dependencies needed for this specific function
-
+  }, [toast]); // Added toast dependency
 
   // Define loadSlang before handleVote which uses it in dependencies
   const loadSlang = useCallback(async (term: string, categories: Category[], region: Region) => {
     setIsLoading(true);
     setIsGeneratingAI(false); // Reset AI generating state
     setError(null);
-    setSlangResults([]); // Clear previous results
+    // setSlangResults([]); // Clear previous results visually later if needed, or keep for smoother transition
 
     try {
       let results = await fetchSlang(term, categories, region);
 
       // If no results found and a specific term was searched, try AI generation
+      // Only trigger AI if specific conditions are met (term exists, no categories, global region)
       if (results.length === 0 && term.trim() && categories.length === 0 && region === 'Global') {
         console.log(`No results for "${term}", attempting AI generation...`);
         setIsGeneratingAI(true); // Set AI generating state
@@ -190,18 +203,19 @@ export default function Home() {
         if (aiResult) {
             console.log(`AI generated definition for "${term}" successfully.`);
             results = [aiResult]; // Use AI result
-             // Optionally add the AI result to the main data pool if desired
+             // Optionally add the AI result to the main data pool if desired (consider implications)
             // setAllSlangData(prev => [...prev, aiResult]);
         } else {
             console.log(`AI generation failed or returned null for "${term}".`);
              // Keep results empty to show "No results found" message
+             results = []; // Explicitly set to empty array
         }
       }
 
       setSlangResults(results);
     } catch (err) {
       console.error("Error fetching slang:", err);
-      setError("Failed to load slang. Please try again.");
+      setError("Failed to load slang. The vibes might be off, try again?");
       setSlangResults([]); // Clear results on error
     } finally {
       setIsLoading(false);
@@ -215,17 +229,15 @@ export default function Home() {
     await new Promise(resolve => setTimeout(resolve, 100)); // Simulate API call delay
 
     let updated = false;
+    let voteDisabled = false; // Flag to check if voting was disabled
+
     setAllSlangData(prevData => {
         const newData = prevData.map(item => {
             if (item.id === id) {
                  // Cannot vote on AI generated entries for now
-                if (item.isAIGenerated && target === 'term') {
+                if (item.isAIGenerated) {
                     console.log("Voting disabled for AI generated entries.");
-                     toast({ // Add toast notification
-                        variant: "destructive",
-                        title: "Voting Disabled",
-                        description: "Can't vote on AI-generated entries.",
-                    });
+                    voteDisabled = true; // Set the flag
                     return item; // Return unchanged item
                 }
 
@@ -237,16 +249,6 @@ export default function Home() {
                         downvotes: type === 'downvote' ? item.downvotes + 1 : item.downvotes,
                     };
                 } else if (target === 'definition' && definitionId && item.communityDefinitions) {
-                     // Cannot vote on definitions of AI generated entries
-                    if (item.isAIGenerated) {
-                        console.log("Voting disabled for community definitions of AI generated entries.");
-                        toast({ // Add toast notification
-                            variant: "destructive",
-                            title: "Voting Disabled",
-                            description: "Can't vote on definitions of AI-generated entries.",
-                        });
-                        return item;
-                    }
                     const newDefs = item.communityDefinitions.map(def => {
                         if (def.id === definitionId) {
                             updated = true;
@@ -266,17 +268,39 @@ export default function Home() {
         return newData;
     });
 
-    // After state update, trigger a re-fetch/filter of slangResults
-    // This ensures the UI reflects the change from allSlangData
-    if (updated) {
-         // Use a slight delay or directly call loadSlang if appropriate
-         // setTimeout(() => loadSlang(searchTerm, selectedCategories, selectedRegion), 50);
-          loadSlang(searchTerm, selectedCategories, selectedRegion);
+    // Show toast only if voting was attempted but disabled
+    if (voteDisabled) {
+        toast({
+            variant: "destructive",
+            title: "Voting Disabled",
+            description: "Can't vote on AI-generated entries.",
+        });
+        return false; // Indicate vote failed because it was disabled
     }
 
 
+    // After state update, trigger a re-fetch/filter of slangResults
+    // This ensures the UI reflects the change from allSlangData
+    if (updated) {
+        // Re-run the filter/fetch logic based on current search/filter state
+        loadSlang(searchTerm, selectedCategories, selectedRegion);
+    }
+
     return updated; // Indicate success/failure based on whether state was potentially changed
    }, [toast, loadSlang, searchTerm, selectedCategories, selectedRegion]); // Add dependencies
+
+
+  const fetchBattle = useCallback(async (): Promise<SlangBattlePair | null> => {
+      console.log("Fetching slang battle");
+      await new Promise(resolve => setTimeout(resolve, 300));
+      // In a real app, fetch a random or current battle
+       // Basic error simulation
+       if (Math.random() < 0.1) { // 10% chance of error
+         throw new Error("Failed to fetch battle - Network Glitch");
+       }
+      return MOCK_BATTLE;
+  }, []);
+
 
   const handleBattleVote = useCallback(async (battleId: string, winningTermId: string): Promise<void> => {
       console.log(`Processing vote for battle ${battleId}, winner: ${winningTermId}`);
@@ -291,7 +315,8 @@ export default function Home() {
       } else {
           console.warn("Winning term not found for toast notification");
       }
-
+        // Optionally fetch a new battle after voting
+        // loadBattle();
   }, [toast, allSlangData]); // Add toast dependency
 
 
@@ -302,32 +327,50 @@ export default function Home() {
         setCurrentBattle(battle);
     } catch (err) {
         console.error("Error fetching battle:", err);
-        // Handle error - maybe don't show battle section
+        setError(prev => prev ? `${prev} | Failed to load battle.` : "Failed to load battle."); // Append or set error
+        setCurrentBattle(null); // Ensure battle is null on error
     } finally {
         setIsBattleLoading(false);
     }
    }, [fetchBattle]); // Added fetchBattle dependency
 
   useEffect(() => {
+    // Initial load based on URL params
     loadSlang(searchTerm, selectedCategories, selectedRegion);
-     // Update URL when search term or region changes
-     const params = new URLSearchParams(window.location.search); // Preserve existing params
-     if (searchTerm) params.set('search', searchTerm); else params.delete('search');
-     if (selectedRegion !== 'Global') params.set('region', selectedRegion); else params.delete('region');
-     // Add category params later if needed
+    loadBattle(); // Load battle on initial mount
 
-     const newUrl = `${window.location.pathname}?${params.toString()}`;
-      // Use replaceState to avoid adding to browser history for filter/search changes
-     window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+     // Only update URL if searchParams is available (client-side)
+     if (searchParams) {
+        const params = new URLSearchParams(searchParams.toString());
+        if (searchTerm) params.set('search', searchTerm); else params.delete('search');
+        if (selectedRegion !== 'Global') params.set('region', selectedRegion); else params.delete('region');
+        // Add category params later if needed
 
-  }, [loadSlang, searchTerm, selectedCategories, selectedRegion]); // Dependencies include region now
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        // Use replaceState to avoid adding to browser history for filter/search changes
+        window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+     }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadSlang, loadBattle, searchTerm, selectedCategories, selectedRegion]); // Only run on relevant state changes, loadSlang/loadBattle have their own deps
+
+  // Separate effect for just updating URL on param changes to avoid re-running fetches unnecessarily
   useEffect(() => {
-      loadBattle(); // Load battle on initial mount
-  }, [loadBattle]);
+     if (typeof window !== 'undefined') {
+         const params = new URLSearchParams(window.location.search);
+         if (searchTerm) params.set('search', searchTerm); else params.delete('search');
+         if (selectedRegion !== 'Global') params.set('region', selectedRegion); else params.delete('region');
+         // Add category params later if needed
+         selectedCategories.forEach(cat => params.append('category', cat)); // Example for categories
+
+         const newUrl = `${window.location.pathname}?${params.toString()}`;
+         window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+     }
+   }, [searchTerm, selectedRegion, selectedCategories]); // Depend only on state that affects the URL
 
   const handleSearch = (newTerm: string) => {
     setSearchTerm(newTerm);
+    // Fetching is handled by the useEffect hook that depends on searchTerm
   };
 
   const handleCategoryChange = (category: Category) => {
@@ -336,39 +379,35 @@ export default function Home() {
         ? prev.filter(c => c !== category)
         : [...prev, category]
     );
+    // Fetching is handled by the useEffect hook that depends on selectedCategories
   };
 
    const handleRegionChange = (region: Region) => {
      setSelectedRegion(region);
+     // Fetching is handled by the useEffect hook that depends on selectedRegion
    };
 
    // Renamed handleVoteCallback to handleTermVote for clarity
    const handleTermVote = async (id: string, type: 'upvote' | 'downvote') => {
-        const success = await handleVote(id, type, 'term');
-        if (!success) {
-            // Toast notification for disabled voting is handled within handleVote
-            console.log("Voting might be disabled for this entry.");
-        }
-        // No need to update local state here, handleVote->setAllSlangData->loadSlang handles it
+        await handleVote(id, type, 'term');
+        // Feedback (toast) handled within handleVote
     };
 
    const handleDefinitionVote = async (definitionId: string, voteType: 'up' | 'down') => {
         // Find the parent SlangEntry ID based on the definitionId
         const parentSlang = allSlangData.find(slang => slang.communityDefinitions?.some(def => def.id === definitionId));
-        if (!parentSlang) return;
+        if (!parentSlang) {
+             console.error(`Parent slang entry not found for definition ID: ${definitionId}`);
+             return;
+        }
 
-        const success = await handleVote(parentSlang.id, voteType === 'up' ? 'upvote' : 'downvote', 'definition', definitionId);
-         if (!success) {
-            // Toast handled in handleVote
-         }
-         // No need to update local state here, handleVote->setAllSlangData->loadSlang handles it
+        await handleVote(parentSlang.id, voteType === 'up' ? 'upvote' : 'downvote', 'definition', definitionId);
+         // Feedback handled in handleVote
    };
 
 
   return (
-      <Suspense fallback={<div className="flex justify-center items-center min-h-screen">Loading...</div>}>
-
-          <div className="flex flex-col min-h-screen gradient-bg">
+    <div className="flex flex-col min-h-screen gradient-bg">
       <Header />
       <main className="flex-grow container mx-auto px-4 py-8 max-w-4xl">
         <div className="flex justify-center mb-6">
@@ -389,6 +428,12 @@ export default function Home() {
              <Skeleton className="h-48 w-full mb-6" />
          ) : currentBattle ? (
            <SlangBattleCard battle={currentBattle} onVote={handleBattleVote} />
+         ) : error?.includes("Failed to load battle") ? ( // Only show battle error if it specifically failed
+             <Alert variant="destructive" className="mt-6 mb-6">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Battle Error</AlertTitle>
+                <AlertDescription>Could not load the Slang Battle right now.</AlertDescription>
+            </Alert>
          ) : null}
 
 
@@ -412,7 +457,7 @@ export default function Home() {
                 <p className="text-lg font-medium">AI is cooking up a definition for "{searchTerm}"...</p>
                 <p className="text-sm mt-1">This might take a moment.</p>
             </div>
-        ) : error ? (
+        ) : error && !error.includes("Failed to load battle") ? ( // Don't show generic error if only battle failed
              <Alert variant="destructive" className="mt-6">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
@@ -434,6 +479,7 @@ export default function Home() {
                  {/* Add Definition Button for single result view (and not AI generated) */}
                  {slangResults.length === 1 && searchTerm && !slang.isAIGenerated && slang.term.toLowerCase() === searchTerm.toLowerCase() && (
                      <div className="mt-4 text-center">
+                         {/* TODO: Implement Add Definition Modal/Form */}
                          <Button variant="outline" size="sm">
                              <PlusCircle className="mr-2 h-4 w-4" /> Add Your Definition
                          </Button>
@@ -442,13 +488,19 @@ export default function Home() {
               </div>
             ))}
           </div>
-        ) : (
+        ) : searchTerm && !isLoading && !isGeneratingAI ? ( // Show "No results" only if a search was performed
            <div className="text-center text-muted-foreground mt-10">
              <p className="text-lg font-medium">No results found {searchTerm ? `for "${searchTerm}"` : ''} {selectedCategories.length > 0 ? `in selected categories` : ''} {selectedRegion !== 'Global' ? ` in ${selectedRegion}` : ''}.</p>
              <p className="text-sm mt-2">Try searching for another term, adjusting filters, or changing the region. Maybe submit this word?</p>
+                {/* TODO: Implement Submit New Slang Modal/Form */}
                <Button variant="outline" size="sm" className="mt-4">
                  <PlusCircle className="mr-2 h-4 w-4" /> Submit New Slang
                </Button>
+           </div>
+        ) : (
+            // Initial state or cleared search - maybe show featured words or welcome message
+            <div className="text-center text-muted-foreground mt-10">
+             <p className="text-lg font-medium">Search for slang or explore trending terms!</p>
            </div>
         )}
 
@@ -459,9 +511,17 @@ export default function Home() {
 
         <BoomerTranslatorModal isOpen={isTranslatorOpen} onOpenChange={setIsTranslatorOpen} />
         <SlangGeneratorModal isOpen={isGeneratorOpen} onOpenChange={setIsGeneratorOpen} />
-          </div>
-      </Suspense>
-
+    </div>
   );
 }
 
+// --- Main Export with Suspense ---
+export default function Home() {
+  // Wrap the component that uses useSearchParams in Suspense
+  // Adding a simple loading fallback
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center min-h-screen"><p>Loading page...</p></div>}>
+      <HomePageContent />
+    </Suspense>
+  );
+}
