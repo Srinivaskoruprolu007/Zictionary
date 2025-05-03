@@ -1,6 +1,5 @@
 
 "use client"; // Needed for state and client-side interactions
-
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link'; // Import Suspense from React
 import { useSearchParams } from 'next/navigation';
@@ -27,7 +26,6 @@ import { Separator } from '@/components/ui/separator';
 import { defineSlang, DefineSlangInput, DefineSlangOutput } from '@/ai/flows/define-slang-flow'; // Import AI definition flow
 import { useToast } from '@/hooks/use-toast'; // Import useToast
 import { Suspense } from 'react';
-
 // --- Mock Data (Initial State) ---
 const INITIAL_MOCK_SLANG_DATA: SlangEntry[] = [
   { id: '1', term: 'Rizz', definition: 'Short for charisma; the ability to charm or flirt successfully.', example: 'He\'s got unspoken rizz.', tone: 'playful', categories: ['social'], freshness: 'fresh', region: 'Global', createdAt: new Date(2023, 5, 1), upvotes: 1502, downvotes: 55, approved: true, submittedBy: 'ZMaster', thenVsNow: { traditionalMeaning: 'Not applicable (new term)', genZMeaning: 'Skill in charming potential romantic partners.' }, origin: 'Popularized by streamer Kai Cenat',
@@ -44,7 +42,6 @@ const INITIAL_MOCK_SLANG_DATA: SlangEntry[] = [
    { id: '7', term: 'Skibidi', definition: 'Originating from a viral YouTube series featuring bizarre singing toilet characters. Often used nonsensically or to refer to the trend itself.', example: 'What is this skibidi toilet thing everyone is talking about?', tone: 'playful', categories: ['internet'], freshness: 'fresh', region: 'Global', createdAt: new Date(2023, 9, 1), upvotes: 450, downvotes: 200, approved: true, origin: 'YouTube series "Skibidi Toilet" by DaFuq!?Boom!' },
    { id: '10', term: 'Ate', definition: 'Similar to "slay," meaning someone did something extremely well or looked amazing.', example: "She absolutely ate that performance.", tone: 'sincere', categories: ['social', 'fashion'], freshness: 'fresh', region: 'Global', createdAt: new Date(2023, 11, 1), upvotes: 950, downvotes: 35, approved: true, origin: 'AAVE, popularized online.' },
 ];
-
 const MOCK_TRENDING_WORDS = [
     { term: 'Rizz', id: '1' },
     { term: 'NPC', id: '6' },
@@ -52,20 +49,19 @@ const MOCK_TRENDING_WORDS = [
     { term: 'Delulu', id: '8' }, // Assuming an ID 8 exists or will be added
     { term: 'Situationship', id: '9' }, // Assuming an ID 9 exists or will be added
 ];
-
 const MOCK_BATTLE: SlangBattlePair = {
     id: 'battle1',
     term1: { id: '5', term: 'Slay' },
     term2: { id: '10', term: 'Ate' },
     question: "Which one's currently hitting harder?",
 };
-
-
 // --- Component ---
 export default function Home() {
+  // Get searchParams before using it
+  const searchParams = useSearchParams();
+  
   const initialSearchTerm = searchParams.get('search') || '';
   const initialRegion = (searchParams.get('region') as Region) || 'Global'; // Default to Global
-
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<Region>(initialRegion);
@@ -79,9 +75,7 @@ export default function Home() {
   const [isTranslatorOpen, setIsTranslatorOpen] = useState(false);
   const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
   const { toast } = useToast(); // Use the toast hook
-
-  // Wrap useSearchParams in a Suspense boundary
-    const searchParams = useSearchParams();
+  // Rest of the code remains the same...
 
 
 
