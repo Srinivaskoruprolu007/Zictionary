@@ -1,40 +1,40 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap"); /* Changed font to Lexend */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  font-family: 'Poppins', sans-serif;
+  font-family: "Lexend", sans-serif; /* Changed font to Lexend */
 }
 
 @layer base {
   :root {
     --background: 0 0% 100%; /* White */
-    --foreground: 270 10% 15%; /* Dark Purple-Gray */
+    --foreground: 240 10% 3.9%; /* Near Black */
     --card: 0 0% 100%;
-    --card-foreground: 270 10% 15%;
+    --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 270 10% 15%;
-    --primary: 271 81% 53%; /* Vibrant Purple #A020F0 */
-    --primary-foreground: 0 0% 100%; /* White */
-    --secondary: 120 100% 90%; /* Lighter Pastel Green for subtle backgrounds */
-    --secondary-foreground: 120 30% 30%; /* Darker Green for text on secondary */
-    --muted: 270 10% 96%; /* Light Gray-Purple */
-    --muted-foreground: 270 5% 45%; /* Medium Gray-Purple */
-    --accent: 182 100% 74%; /* Electric Blue #7DF9FF */
-    --accent-foreground: 180 50% 20%; /* Dark Cyan for text on accent */
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 346.8 77.2% 49.8%; /* Vibrant Pink */
+    --primary-foreground: 355.7 100% 97.3%; /* Very Light Pink */
+    --secondary: 210 40% 96.1%; /* Light Blue-Gray */
+    --secondary-foreground: 215.4 16.3% 46.9%; /* Medium Blue-Gray */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 142.1 70.6% 45.3%; /* Bright Green */
+    --accent-foreground: 144.9 80.4% 97.3%; /* Very Light Green */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 270 10% 88%; /* Light Gray-Purple Border */
-    --input: 270 10% 92%; /* Slightly darker input background */
-    --ring: 182 100% 74%; /* Electric Blue for focus rings */
-    --chart-1: 271 81% 60%;
-    --chart-2: 120 60% 70%;
-    --chart-3: 182 80% 65%;
+    --border: 214.3 31.8% 91.4%; /* Light Gray Border */
+    --input: 214.3 31.8% 91.4%;
+    --ring: 346.8 77.2% 49.8%; /* Vibrant Pink for focus rings */
+    --chart-1: 346.8 77.2% 55%;
+    --chart-2: 142.1 70.6% 50%;
+    --chart-3: 210 40% 60%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.75rem; /* Slightly more rounded */
+    --radius: 0.8rem; /* Slightly more rounded */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -45,28 +45,28 @@ body {
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
   .dark {
-    --background: 270 15% 10%; /* Dark Purple */
-    --foreground: 270 10% 95%; /* Very Light Gray-Purple */
-    --card: 270 15% 15%; /* Slightly Lighter Dark Purple */
-    --card-foreground: 270 10% 95%;
-    --popover: 270 15% 10%;
-    --popover-foreground: 270 10% 95%;
-    --primary: 271 81% 65%; /* Lighter Vibrant Purple */
-    --primary-foreground: 270 10% 5%; /* Very Dark Purple */
-    --secondary: 120 30% 20%; /* Dark Pastel Green */
-    --secondary-foreground: 120 100% 80%; /* Light Pastel Green */
-    --muted: 270 10% 20%; /* Darker Gray-Purple */
-    --muted-foreground: 270 5% 65%; /* Lighter Gray-Purple */
-    --accent: 182 100% 74%; /* Electric Blue (same) */
-    --accent-foreground: 180 90% 15%; /* Very Dark Cyan */
+    --background: 240 10% 3.9%; /* Near Black */
+    --foreground: 0 0% 98%; /* Near White */
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 346.8 77.2% 49.8%; /* Vibrant Pink */
+    --primary-foreground: 355.7 100% 97.3%; /* Very Light Pink */
+    --secondary: 217.2 32.6% 17.5%; /* Dark Blue-Gray */
+    --secondary-foreground: 210 40% 98%; /* Light Blue-Gray */
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%; /* Medium Gray */
+    --accent: 142.1 70.6% 45.3%; /* Bright Green */
+    --accent-foreground: 144.9 80.4% 97.3%; /* Very Light Green */
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 270 10% 25%; /* Darker Border */
-    --input: 270 10% 22%; /* Darker Input */
-    --ring: 182 100% 74%; /* Electric Blue */
-    --chart-1: 271 81% 70%;
-    --chart-2: 120 70% 60%;
-    --chart-3: 182 90% 60%;
+    --border: 217.2 32.6% 17.5%; /* Dark Gray Border */
+    --input: 217.2 32.6% 17.5%;
+    --ring: 346.8 77.2% 49.8%; /* Vibrant Pink */
+    --chart-1: 346.8 77.2% 55%;
+    --chart-2: 142.1 70.6% 50%;
+    --chart-3: 210 40% 60%;
     --chart-4: 43 74% 70%;
     --chart-5: 27 87% 70%;
     --sidebar-background: 240 5.9% 10%;
@@ -92,9 +92,17 @@ body {
 
 /* Add a gradient background */
 .gradient-bg {
-  background: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1));
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary) / 0.1),
+    hsl(var(--accent) / 0.1)
+  );
 }
 
 .dark .gradient-bg {
-    background: linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--accent) / 0.2));
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary) / 0.2),
+    hsl(var(--accent) / 0.2)
+  );
 }
